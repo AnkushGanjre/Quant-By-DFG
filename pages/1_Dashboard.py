@@ -3,7 +3,7 @@ import streamlit as st
 # Check if user is logged in
 if "authToken" not in st.session_state:
     st.warning("Please log in to access the Dashboard.")
-    st.switch_page("main.py")
+    st.switch_page("streamlit_app.py")
 
 # Display dashboard content
 st.title("Dashboard")
