@@ -1,0 +1,30 @@
+[I 241230 00:15:29 1_Dashboard:131] on open
+[I 241230 00:19:06 smartConnect:121] in pool
+[W 241230 00:19:09 smartWebSocketV2:319] Attempting to resubscribe/reconnect (Attempt 1)...
+[E 241230 00:19:19 1_Dashboard:137] Connection closed
+[W 241230 00:19:19 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:19:19 1_Dashboard:137] Connection closed
+[W 241230 00:19:19 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:19:19 1_Dashboard:137] Connection closed
+[W 241230 00:19:19 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[W 241230 00:19:36 smartWebSocketV2:319] Attempting to resubscribe/reconnect (Attempt 1)...
+[E 241230 00:19:46 1_Dashboard:137] Connection closed
+[W 241230 00:19:46 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:19:46 1_Dashboard:137] Connection closed
+[W 241230 00:19:46 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:19:46 1_Dashboard:137] Connection closed
+[W 241230 00:19:46 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[W 241230 00:20:21 smartWebSocketV2:319] Attempting to resubscribe/reconnect (Attempt 1)...
+[E 241230 00:20:31 1_Dashboard:137] Connection closed
+[W 241230 00:20:31 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:20:31 1_Dashboard:137] Connection closed
+[W 241230 00:20:31 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:20:31 1_Dashboard:137] Connection closed
+[W 241230 00:20:31 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[W 241230 00:22:02 smartWebSocketV2:319] Attempting to resubscribe/reconnect (Attempt 1)...
+[E 241230 00:22:12 1_Dashboard:137] Connection closed
+[W 241230 00:22:12 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:22:12 1_Dashboard:137] Connection closed
+[W 241230 00:22:12 smartWebSocketV2:343] Connection closed due to max retry attempts reached.
+[E 241230 00:22:12 1_Dashboard:137] Connection closed
+[W 241230 00:22:12 smartWebSocketV2:343] Connection closed due to max retry attempts reached.

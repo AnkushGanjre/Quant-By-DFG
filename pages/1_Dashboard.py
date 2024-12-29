@@ -32,14 +32,12 @@ with col3:
 
 # Function to update metrics
 def update_metrics(sensex, nifty, banknifty):
-    sensex_placeholder.metric(label="Sensex", value=f"{sensex:,.2f}", delta="+1")
-    nifty_placeholder.metric(label="Nifty", value=f"{nifty:,.2f}", delta="+2")
-    banknifty_placeholder.metric(label="BankNifty", value=f"{banknifty:,.2f}", delta="+3")
+    sensex_placeholder.metric(label="Sensex", value=f"{sensex / 100:,.2f}", delta="+1")
+    nifty_placeholder.metric(label="Nifty", value=f"{nifty / 100:,.2f}", delta="+2")
+    banknifty_placeholder.metric(label="BankNifty", value=f"{banknifty / 100:,.2f}", delta="+3")
 
 # Update initial metrics display
 update_metrics(st.session_state.sensex, st.session_state.nifty, st.session_state.banknifty)
-
-
 
 # Top 10 Stocks Section
 st.write("#### Top 10 Stocks")
@@ -54,8 +52,7 @@ for stock, value in zip(stocks, dummy_values):
     col2.write(value)
 
 
-
-
+# WebSocket setup
 AUTH_TOKEN = st.session_state.authToken
 API_KEY = st.session_state.api_key
 CLIENT_CODE = st.session_state.angelOneId
@@ -137,7 +134,6 @@ def on_error(wsapp, error):
 
 def on_close(wsapp):
     logger.info("Close")
-
 
 
 def close_connection():
