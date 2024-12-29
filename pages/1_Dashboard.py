@@ -58,7 +58,7 @@ for stock, value in zip(stocks, dummy_values):
 
 AUTH_TOKEN = st.session_state.authToken
 API_KEY = st.session_state.api_key
-CLIENT_CODE = st.session_state.username
+CLIENT_CODE = st.session_state.angelOneId
 FEED_TOKEN = st.session_state.feedToken
 correlation_id = "abc123"
 action = 1

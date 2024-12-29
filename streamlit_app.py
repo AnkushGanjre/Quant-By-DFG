@@ -90,7 +90,7 @@ def authenticate_user():
 
                     # Store data in session state
                     st.session_state.api_key = api_key
-                    st.session_state.username = username
+                    st.session_state.angelOneId = username
                     st.session_state.totpToken = token
 
                     st.session_state.authToken = authToken
