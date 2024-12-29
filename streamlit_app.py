@@ -89,6 +89,10 @@ def authenticate_user():
                     st.success("Login Successful!")
 
                     # Store data in session state
+                    st.session_state.api_key = api_key
+                    st.session_state.username = username
+                    st.session_state.totpToken = token
+
                     st.session_state.authToken = authToken
                     st.session_state.refreshToken = refreshToken
                     st.session_state.feedToken = feedToken
