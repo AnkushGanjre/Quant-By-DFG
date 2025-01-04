@@ -1,118 +1,96 @@
+import os
+import pandas as pd
 import streamlit as st
-from SmartApi import SmartConnect  # Import the SmartApi library
-import pyotp
-from logzero import logger
+from plotly import graph_objects as go
+from DataFetch import update_historical_data  # Import your update function
 
 # Set page configuration
-st.set_page_config(page_title="Donzai Fincorp Group", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Quant by DFG", layout="wide", initial_sidebar_state="collapsed")
 
-# Check if user is logged in
-if "authToken" in st.session_state:
-    st.switch_page("pages/1_Dashboard.py")
+st.write("### Welcome to Quant by DFG!")
+st.write("##### Dashboard")
 
-# Custom CSS for loading overlay
-st.markdown("""
-    <style>
-    .loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(255, 255, 255, 0.8);
-        z-index: 9999;
-        display: none;
-        justify-content: center;
-        align-items: center;
-        font-size: 24px;
-        color: black;
-    }
-    .loading-overlay.show {
-        display: flex;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Folder containing the stock data files
+DATA_FOLDER = "historical_data"
 
-# # Initialize session state for loading overlay
-if "logging_Error" not in st.session_state:
-    st.session_state.logging_Error = None
+# Fetch all stock symbols from the folder
+@st.cache_data
+def get_stock_symbols(data_folder):
+    return [file.replace(".parquet", "") for file in os.listdir(data_folder) if file.endswith(".parquet")]
 
-# Use columns for side-by-side layout
-col1, col2, col3 = st.columns([1, 1, 2])  # Adjust ratios as needed
+# Load stock data from the selected file
+@st.cache_data
+def load_stock_data(data_folder, stock_symbol):
+    file_path = os.path.join(data_folder, f"{stock_symbol}.parquet")
+    return pd.read_parquet(file_path)
+
+# Create candlestick chart
+def create_candlestick_chart(stock_data, stock_symbol):
+    fig = go.Figure(
+        data=[
+            go.Candlestick(
+                x=stock_data['Date'],
+                open=stock_data['Open'],
+                high=stock_data['High'],
+                low=stock_data['Low'],
+                close=stock_data['Close']
+            )
+        ]
+    )
+    fig.update_layout(
+        title=f"Candlestick Chart for {stock_symbol}",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        xaxis_rangeslider_visible=False
+    )
+    return fig
+
+# Get last close and delta for metrics
+def get_last_close_and_delta(data_folder, stock_symbol):
+    data = load_stock_data(data_folder, stock_symbol)
+    last_close = data['Close'].iloc[-1]
+    delta = last_close - data['Close'].iloc[-2]
+    return last_close, delta
+
+# Get last date from Nifty50 file
+def get_latest_date(data_folder, stock_symbol="^NSEI"):
+    data = load_stock_data(data_folder, stock_symbol)
+    return data['Date'].max()
+
+# Metrics for Sensex, Nifty, BankNifty
+col1, col2, col3 = st.columns(3)
 with col1:
-    st.markdown("<h1 style='font-size: 35px; margin-bottom: 0;'>Quant by DFG</h1>", unsafe_allow_html=True)  # Adjust font size
+    sensex_close, sensex_delta = get_last_close_and_delta(DATA_FOLDER, "^BSESN")
+    st.metric(label="Sensex", value=f"{sensex_close:.2f}", delta=f"{sensex_delta:.2f}")
 with col2:
-    st.markdown("<h2 style='font-size: 15px; margin-top: 22px;'>Smart API by AngelOne</h2>", unsafe_allow_html=True)  # Adjust font size and spacing
+    nifty_close, nifty_delta = get_last_close_and_delta(DATA_FOLDER, "^NSEI")
+    st.metric(label="Nifty", value=f"{nifty_close:.2f}", delta=f"{nifty_delta:.2f}")
+with col3:
+    banknifty_close, banknifty_delta = get_last_close_and_delta(DATA_FOLDER, "^NSEBANK")
+    st.metric(label="BankNifty", value=f"{banknifty_close:.2f}", delta=f"{banknifty_delta:.2f}")
 
-# Login Form
-st.write("##### Login Credentials")
-with st.form(key="login_form"):
-    api_key = st.text_input("API Key", placeholder="Your API Key")
-    username = st.text_input("AngelOne Username", placeholder="Your AngelOne Username")
-    pwd = st.text_input("AngelOne Login PIN", placeholder="Your AngelOne Login PIN", type="password")
-    token = st.text_input("TOTP Token", placeholder="Your TOTP Token")
-    login_button = st.form_submit_button("Login")
-    
+# Get list of chart symbols
+stock_symbols = get_stock_symbols(DATA_FOLDER)
 
-# Authentication Logic as a Method
-def authenticate_user():
-    if not api_key or not username or not pwd or not token:
-        st.error("All fields are required!")
-        return
-    else:
-        # Show loading overlay
-        st.markdown('<div class="loading-overlay show">Authenticating...</div>', unsafe_allow_html=True)
+# Dropdown for stock chart
+col4, col5, col6 = st.columns(3)
+with col4:
+    selected_chart_name = st.selectbox("Select Chart:", stock_symbols)
+with col5:
+    st.write("")  # Spacer for alignment
+with col6:
+    # st.write("")  # Spacer for alignment
+    time_frame = st.selectbox("Select Timeframe:", ["Daily", "Weekly", "Monthly"])  # Timeframe dropdown
 
-        with st.spinner("Authenticating..."):
-            try:
-                # Initialize SmartConnect
-                smartApi = SmartConnect(api_key=api_key)
+# Display candlestick chart for selected stock
+if selected_chart_name:
+    stock_data = load_stock_data(DATA_FOLDER, selected_chart_name)
+    stock_data = stock_data.sort_values(by="Date")  # Ensure data is sorted
+    st.plotly_chart(create_candlestick_chart(stock_data, selected_chart_name))
 
-                # Generate TOTP using pyotp
-                totp = pyotp.TOTP(token).now()
-
-                # Call generateSession
-                data = smartApi.generateSession(username, pwd, totp)
-
-                if data["status"] is False:
-                    error_message = f"Login Failed: {data.get('message', 'Unknown Error')}"
-                    st.session_state.logging_Error = error_message
-                    st.error(error_message)
-                    st.rerun()
-                else:
-                    # On Success
-                    authToken = data['data']['jwtToken']
-                    refreshToken = data['data']['refreshToken']
-                    feedToken = smartApi.getfeedToken()
-                    profile_data = smartApi.getProfile(refreshToken)
-
-                    st.success("Login Successful!")
-
-                    # Store data in session state
-                    st.session_state.api_key = api_key
-                    st.session_state.angelOneId = username
-                    st.session_state.totpToken = token
-
-                    st.session_state.authToken = authToken
-                    st.session_state.refreshToken = refreshToken
-                    st.session_state.feedToken = feedToken
-                    st.session_state.profile_data = profile_data
-                    st.session_state.logging_Error = None
-
-                    # Navigate to Dashboard
-                    st.switch_page("pages/1_Dashboard.py")
-
-            except Exception as e:
-                logger.error(e)
-                error_message = f"An error occurred during authentication: {e}"
-                st.error(error_message)
-                st.session_state.logging_Error = error_message
-                st.rerun()
-
-# Display the error message if exists
-if st.session_state.logging_Error:
-    st.error(st.session_state.logging_Error)
-
-# Trigger the authentication method when login_button is clicked
-if login_button:
-    authenticate_user()
+# Update data button
+latest_date = get_latest_date(DATA_FOLDER, "^NSEI")
+st.write(f"Latest Data: {latest_date}")
+if st.button("Update data"):
+    update_historical_data()
+    st.rerun()  # Refresh the app to reflect updated data
