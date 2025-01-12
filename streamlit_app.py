@@ -128,6 +128,6 @@ if selected_chart_symbol:
 # Update data button
 latest_NiftyDate = get_latest_date(DATA_FOLDER, "^NSEI")
 st.write(f"Latest Data: {latest_NiftyDate}")
-if st.button("Update data"):
-    update_historical_data()
-    st.rerun()  # Refresh the app to reflect updated data
+# if st.button("Update data"):
+#     update_historical_data()
+#     st.rerun()  # Refresh the app to reflect updated data
