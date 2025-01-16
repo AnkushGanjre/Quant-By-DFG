@@ -34,4 +34,4 @@ gui.add_page("dashboard", dashboard_page)
 
 # Run the application
 if __name__ == "__main__":
-    gui.run(host="0.0.0.0", port=5000)  # Set host to 0.0.0.0 and choose an appropriate port
+    gui.run(host="0.0.0.0", port=10000)  # Use Render's default port
