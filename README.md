@@ -1,8 +1,8 @@
-# Demo Stock Visualization
+# Quant By DFG
 
 ## Usage
 - [Usage](#usage)
-- [Demo Stock Visualization](#what-is-quant-by-dfg)
+- [Quant By DFG](#what-is-quant-by-dfg)
 - [Directory Structure](#directory-structure)
 
 ## What is Quant By DFG
@@ -17,7 +17,7 @@
 
 ## How to run
 
-This demo works with a Python version superior to 3.8. Install the dependencies of the *Pipfile* and run the *main_markdown.py*.
+This demo works with a Python version superior to 3.8. Install the dependencies and run the *main.py*.
 
 ## Introduction
 Normally, if you want to check out a stock's historical performance like the opening/closing price and trading volume, it is often the case that this is done manually through a google search. Now, using taipy GUI and the yahoo finance library, we could get these informations in just a fraction of a second, visualize it using taipy's tools, and make a dashboard that anyone can use easily. 
@@ -32,15 +32,10 @@ Feel free to play with the application, enter a new ticker to the list, and make
 ## Directory Structure
 
 
-- `src/`: Contains the demo source code.
-- `CONTRIBUTING.md`: Instructions to contribute to _demo-stock-visualization_.
-- `Pipfile`: File used by the Pipenv virtual environment to manage project dependencies.
+- `src/`: Contains the source code.
+- `Contributors.txt`: Contributors of _Quant By DFG_.
 - `README.md`: Current file.
 
-## Contributing
+## Contributors
 
-Want to help build _Demo Stock Visualization_? Check out our [`CONTRIBUTING.md`](CONTRIBUTING.md) file.
-
-## Code of conduct
-
-Want to be part of the _Demo Stock Visualization_ community? Check out our [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) file.
+Want to help build _Quant By DFG_? Check out our [`Contributors`](contributors.txt) file.
