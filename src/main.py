@@ -59,6 +59,7 @@ if __name__ == "__main__":
     app.run(
         title="QuantByDFG",
         use_reloader=True,  # Enable automatic reloading during development
+        host="0.0.0.0",     # Set host to 0.0.0.0
         port=5000,
         light_theme=light_theme,
         dark_theme=dark_theme,

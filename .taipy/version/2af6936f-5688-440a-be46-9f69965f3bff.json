@@ -1,5 +1,5 @@
 {
 "id": "2af6936f-5688-440a-be46-9f69965f3bff",
 "config": "{\n\"TAIPY\": {},\n\"gui\": {},\n\"JOB\": {\n\"mode\": \"development\"\n},\n\"CORE\": {\n\"root_folder\": \"./taipy/\",\n\"storage_folder\": \"user_data/\",\n\"taipy_storage_folder\": \".taipy/\",\n\"repository_type\": \"filesystem\",\n\"read_entity_retry\": \"1:int\",\n\"mode\": \"development\",\n\"version_number\": \"\",\n\"force\": \"False:bool\",\n\"core_version\": \"4.0.2\"\n},\n\"DATA_NODE\": {\n\"default\": {\n\"storage_type\": \"pickle\",\n\"scope\": \"SCENARIO:SCOPE\"\n}\n},\n\"TASK\": {\n\"default\": {\n\"function\": null,\n\"inputs\": [],\n\"outputs\": [],\n\"skippable\": \"False:bool\"\n}\n},\n\"SCENARIO\": {\n\"default\": {\n\"comparators\": {},\n\"tasks\": [],\n\"additional_data_nodes\": [],\n\"frequency\": null,\n\"sequences\": {}\n}\n}\n}",
-"creation_date": "2025-01-18T01:15:53.377402"
+"creation_date": "2025-01-18T01:27:13.197752"
 }
