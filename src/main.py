@@ -1,37 +1,65 @@
-from taipy.gui import Gui
+import taipy as tp
+from taipy.gui import Gui, navigate
+from pages.root import create_page as create_root_page
+from pages.home.home import create_page as create_home_page
+from pages.simpleMovingAverage.simpleMovingAverage import create_page as create_sma_page
+from pages.meanReversion.meanReversion import create_page as create_mean_reversion_page
 
-# Define the content for the pages
-main_page = """
-# Welcome to Quant By DFG
+# Define themes
+light_theme = {
+    "palette": {
+        "background": {
+            "default": "#f0f4f8",  # Soft light gray background
+        },
+        "primary": {
+            "main": "#4a90e2",  # Soft blue for primary elements
+        },
+        "text": {
+            "primary": "#333333",  # Dark gray text for good readability
+            "secondary": "#666666",  # Medium gray for less emphasized text
+        }
+    }
+}
 
-This is a simple web app built using **Taipy**. Future development will include features like:
-- Stock price prediction.
-- Strategy backtesting.
-- Comprehensive dashboards for quant finance analysis.
+dark_theme = {
+    "palette": {
+        "background": {
+            "default": "#1e1e1e",  # Dark gray background
+        },
+        "primary": {
+            "main": "#4a90e2",  # Soft blue for primary elements
+        },
+        "text": {
+            "primary": "#ffffff",  # White text for readability
+            "secondary": "#b0b0b0",  # Light gray for less emphasized text
+        }
+    }
+}
 
-Visit the **Dashboard** for an overview (placeholder for now).
+# Function to handle menu navigation
+def menu_option_selected(state, action, info):
+    page = info["args"][0]
+    navigate(state, to=page)
 
-[Go to Dashboard](dashboard)
-"""
+# Initialize pages
+pages = {
+    "/": create_root_page(menu_option_selected),
+    "home": create_home_page(),
+    "simpleMovingAverage": create_sma_page(),
+    "meanReversion": create_mean_reversion_page(),
+}
 
-dashboard_page = """
-# Dashboard
+app = Gui(pages=pages)
 
-Welcome to the dashboard page. Future updates will display:
-- Stock data visualizations.
-- Backtesting results.
-- Predictive analytics.
-
-Stay tuned for more!
-"""
-
-# Initialize the Taipy GUI
-gui = Gui()
-
-# Add pages to the GUI
-gui.add_page("index", main_page)
-gui.add_page("dashboard", dashboard_page)
-
-# Run the application
 if __name__ == "__main__":
-    gui.run(host="0.0.0.0", port=10000)  # Use Render's default port
+    # Start the Core application
+    tp.Orchestrator().run()
+
+    # Run the GUI application
+    app.run(
+        title="QuantByDFG",
+        use_reloader=True,  # Enable automatic reloading during development
+        port=5000,
+        light_theme=light_theme,
+        dark_theme=dark_theme,
+    )
