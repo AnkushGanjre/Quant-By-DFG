@@ -1,18 +1,35 @@
-from taipy.gui import Markdown
-from taipy.gui.builder import Page, menu, text, toggle
+import taipy.gui.builder as tgb
 
-def create_page(menu_callback):
-    with Page() as page:
-        menu(
-            label="Menu",
-            lov=[
-                ("home", "Home"),
-                ("simpleMovingAverage", "Simple Moving Average"),
-                ("meanReversion", "Mean Reversion"),
-            ],
-            on_action=menu_callback,
-        )
-        # text("# Quant By DFG\nWelcome to the app!", mode="md")
-    return page
+def creates_pages(pages):
+    return [(f"/{page}", page.replace("_", " ").title()) for page in list(pages)[1:]]
 
-# root = Markdown('root.md')
+
+with tgb.Page() as root:
+    tgb.toggle(theme=True)
+
+    with tgb.part("header sticky"):
+        with tgb.layout(
+            "100px 12rem 1 8rem 150px",
+            columns__mobile="100px 12rem 1 8rem 150px",
+            class_name="header-content",
+        ):
+            tgb.image("DFG_Logo.png", width="100px")
+            tgb.text("Quant By **DGF**", mode="md")
+
+            with tgb.part("text-center"):
+                tgb.navbar(
+                    lov="{creates_pages(pages)}",
+                    inline=True,
+                )
+
+            tgb.part()
+
+            tgb.text(
+                "Welcome back!",
+                mode="md",
+            )
+
+    with tgb.part("content"):
+        tgb.html("br")
+
+        tgb.content()

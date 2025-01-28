@@ -1,6 +1,9 @@
-from taipy.gui.builder import Page, text, toggle
+import taipy.gui.builder as tgb
 
-def create_page():
-    with Page() as page:
-        text("# Quant By DFG", mode="md")
-    return page
+
+with tgb.Page() as home_page:
+    tgb.text("# **Quant By** DFG", mode="md")
+    tgb.text(
+        "Home Page."
+    )
+    tgb.html("br")
