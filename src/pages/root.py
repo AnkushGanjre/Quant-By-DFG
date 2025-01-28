@@ -14,7 +14,7 @@ with tgb.Page() as root:
             class_name="header-content",
         ):
             tgb.image("DFG_Logo.png", width="100px")
-            tgb.text("Quant By **DGF**", mode="md")
+            tgb.text("Quant By **DFG**", mode="md")
 
             with tgb.part("text-center"):
                 tgb.navbar(

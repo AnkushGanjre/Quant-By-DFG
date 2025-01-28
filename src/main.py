@@ -25,5 +25,5 @@ if __name__ == "__main__":
         use_reloader=True,      # Enable automatic reloading during development
         host="0.0.0.0",         # Set host to 0.0.0.0 (localhost)
         port=2562,
-        margin="0px"
+        margin="0px"            # Here all the CSS styling is set
         )
