@@ -1,7 +1,7 @@
 from taipy.gui import Gui
 import taipy as tp
 
-from pages.Home.home import home_page
+from pages.home.home import home_page
 from pages.VaR.VaR import VaR_page
 from pages.root import root
 

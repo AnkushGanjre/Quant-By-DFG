@@ -7,3 +7,4 @@ with tgb.Page() as home_page:
         "Dashboard text here"
     )
     tgb.html("br")
+    
