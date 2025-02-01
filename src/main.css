@@ -1,94 +1,115 @@
+/* This makes the sidebar automatically adjust its height based on the content inside it. */
 .css-179jfzq .sidebar{
     height: auto;
 }
 
 /* Bold text are now in primary color */
+/* This makes bold text (<b> and <strong>) change to the primary color instead of default black. */
 strong, b  {
     font-weight: bold;
     color : var(--color-primary);
 }
 
+/* The main heading (h1) will have a very tight line height (15px). */
 h1, .h1 {
     line-height: 15px;
 }
 
+/* Paragraphs inside cards (.card p) will have a line height of 1 rem (which is around 16px in most browsers). */
 .card p{
     line-height: 1rem;
 }
 
-/* Restrict width of page */
+/* This ensures the content stays centered by keeping 2% margin on both sides. */
 .content{
     margin-left: 2%;
     margin-right: 2%;
 }
 
-/* Change behavior of sticky header */
+/* The header remains sticky (fixed at the top) but allows scrolling (overflow:auto) */
+/* The z-index: 2; ensures it stays above other elements. */
 .header.sticky{
     overflow:auto;
     z-index: 2;
 }
 
-/* Change the width of the sticky header content */
+/* The content inside the sticky header has extra right margin (7%) to prevent it from stretching too far. */
 .header-content{
     margin-left: 2%;
     margin-right: 7%;
 }
 
 /* Change the color of the tabs */
+/* This targets tabs (MuiTab-root) inside the header. */
 .header .MuiButtonBase-root.MuiTab-root{
-    border: 1px solid var(--color-primary); /* Thin line with 1px width, change color as needed */
-    border-radius: 25px; /* Adjust this value for more or less rounding */
-    padding: 10px; /* Optional: adds padding inside the rounded border */
+    border: 1px solid var(--color-primary); /* Thin line with 1px width, change color as needed, Adds a border of var(--color-primary). */
+    border-radius: 25px; /* Adjust this value for more or less rounding, Rounded corners (border-radius: 25px) make the tabs pill-shaped. */
+    padding: 10px; /* Optional: adds padding inside the rounded border, Padding & Margin ensure proper spacing. */
     margin: 10px;
     text-transform: none;
-    width: 12%;
+    width: 12%;     /* Fixed width of 12% keeps them consistent in size. */
 }
 
+/* A background color matching the primary theme., White text to ensure readability. */
 .header .MuiButtonBase-root.MuiTab-root.Mui-selected{
     background-color: var(--color-primary);
     color: white;
 }
 
-
-/* Hide "Mode" in theme toggle */
+/* Hide "Mode" in theme toggle, The theme toggle text is hidden by setting opacity: 0; */
 .css-6fy833 p{
     opacity: 0;
 }
 
-/* Change position of theme toggle */
+/* Change position of theme toggle, The theme toggle button group is fixed at the top-right corner. */
 .css-6fy833 .MuiToggleButtonGroup-root{
     top: 0.1rem !important;
     right: 0.5rem ! important;
     position: fixed;
 }
 
-/* Add margin to charts */
+/* Add margin to charts, Adds spacing (5px margin) around charts for better layout. */
 .taipy-chart{
     margin:5px;
 }
 
-/* Change all toggles */
+/* Change all toggles, Ensures all toggle buttons are 50px high. */
 .taipy-toggle .MuiToggleButtonGroup-root{
     height: 50px;
 }
 
+/* Change background color to the primary theme, White text for readability, Fixed height of 50px */
 .taipy-toggle .Mui-selected{
     background-color: var(--color-primary);
     color:white;
     height: 50px;
 }
 
-.taipy-toggle .Mui-selected .MuiTypography-root{
-    color:white !important;
-}
-
-/* Toggle Text */
+/* By default, toggle text inherits the primary theme color. */
 .taipy-toggle .MuiTypography-root{
     color: var(--color-primary);
 }
 
-/* Toggle Text Selected */
+/* When selected, toggle text turns white. */
 .taipy-toggle .Mui-selected .MuiTypography-root{
     color: var(--color-primary);
 }
 
+/*  */ 
+.apply-button{
+    width: 60%;
+}
+
+/* styles.css */
+.large-font {
+    font-size: 24px;
+}
+
+.small-font {
+    font-size: 14px;
+}
+
+.link-style {
+    color: blue;
+    text-decoration: underline;
+}
