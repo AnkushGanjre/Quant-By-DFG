@@ -1,5 +1,7 @@
 numpy
-taipy
-scikit-learn
-pmdarima
+pandas
 plotly
+pmdarima
+scikit-learn
+taipy
+yfinance
