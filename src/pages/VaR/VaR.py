@@ -49,34 +49,41 @@ def GetStockData(symbol, qty, state):
 
     # Format the Date column
     df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
-    
+
+    # last close price
+    current_price: float = round(float(df['Close'].iloc[-1]), 2)
+
     # Storing Stock Name, symbol, qty, price and DataFrame in a dictionary
     stock_data = {
         "Name": stock.info.get("longName"),
         "Symbol": symbol,
         "Quantity": qty,
-        "Current Price": df['Close'].iloc[-1],
+        "Current Price": current_price,
+        "Investment Amount": current_price*qty,
         "DataFrame": df
     }
 
-    # Add the stock_data dictionary to the stock_list
-    stock_list.append(stock_data)
+    # Create a **new list** instead of modifying the existing one
+    state.stock_list = state.stock_list + [stock_data]  # New list triggers UI update
 
     # Optionally, you can print stock_list to verify
-    print(stock_list)
+    print(state.stock_list)
 
     # Notify Success
     notify(state, "success", f"Added {symbol}, Quantity: {qty}")
-    Gui.reload(state)
     
+def OnVaRCalculate():
+    print("Now calculating VaR")
 
-# GUI Layout
+# ----------------------------------
+# Building Pages with TGB
+# ----------------------------------
 with tgb.Page() as VaR_page:
     tgb.text("## Value at Risk **(VaR)** & Conditional Value at Risk **(CVaR)**", mode="md")
     tgb.html("br")  # blank spacer
     tgb.text("##### **Create Your Portfolio** &nbsp;&nbsp;&nbsp;&nbsp; Get the stock symbol from [Yahoo Finance](https://finance.yahoo.com)", mode="md")
 
-    # First row: Input fields and button
+    # First Card: Input fields and button
     with tgb.layout(columns="5 2 1", gap="30px", class_name="card"):
         with tgb.part():
             tgb.input(value="{input_ticker}", label="Yahoo Finance Ticker", class_name="fullwidth")
@@ -89,32 +96,32 @@ with tgb.Page() as VaR_page:
 
     tgb.html("br")  # blank spacer
 
-    # Portfolio Table
+    # Second Card: Portfolio Table
     with tgb.part(class_name="card"):
-        print("Second Card Called")
-        if isinstance(stock_list, list):
-            print("List count zero")
-            tgb.text("Empty Here, Add some stocks to your portfolio", mode="md", class_name="fullwidth text-center")
-        else:
-            print("List count *************")
-            tgb.text("List not empty anymore", mode="md", class_name="fullwidth text-center")
+        tgb.text("### Portfolio", mode="md")
+        
+        tgb.table(lambda state: pd.DataFrame(state.stock_list) if state.stock_list else pd.DataFrame(columns=["Name", "Symbol", "Quantity", "Current Price", "Investment Amount"]),
+          columns=["Name", "Symbol", "Quantity", "Current Price", "Investment Amount"],
+          class_name="fullwidth")
+    
+        tgb.button("Calculate VaR", class_name="plain text-center", on_action=OnVaRCalculate)
+        
+    tgb.html("br")  # blank spacer
     
     
 
 
 
 # Store stock_list Locally on the browser (Does not erase when reload the page)
-# Show in table Stock NAME, stock symbol, current price, Qty, Investment amount
+# Show in table Stock NAME, stock symbol, current price, Qty, Investment amount & delete button
 # Total Portfolio value & Calculate VaR & CVaR Button
 
 # Variance & Covariance Method
-# calculate daily return & mean return of stock
-# calculate weightage of each stock
-# Calculate mean return of portfolio (Average of (w1*r1 + w2*r2 + w3*r3)) (in %)
-
 # Historical Method
-
 # Monte Carlo Method
+
+# Traffic Light Approach
+# Kupiec Test
 
 # Visually show the result
 # Final look- (Input field at top, Table showing portfolio, below result (Charts & Graphs))
