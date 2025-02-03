@@ -1,11 +1,18 @@
-from taipy.gui import Gui, State, invoke_long_callback, notify, builder as tgb
+from taipy.gui import notify, builder as tgb
 import yfinance as yf
 import pandas as pd
+
 
 # Initialize state variables
 input_ticker = ""
 input_qty = 1
-stock_list = []  # Store portfolio stocks as a list of dictionaries
+render_stock_table = False
+
+# Store portfolio data (table) and full stock data (dict)
+stock_table_data = pd.DataFrame(columns=["Stock Name", "Stock Symbol", "Qty", "Current Price", "Investment Amount"])
+stock_data_dict = {}  # Store full 1-year historical data keyed by symbol
+total_portfolio_value = 0
+
 
 # Callback function to validate the ticker and handle the input
 def OnTickerValidate(state):
@@ -29,10 +36,13 @@ def OnTickerValidate(state):
 
 # Fetch stock data and add to portfolio
 def GetStockData(symbol, qty, state):
+    global stock_table_data, stock_data_dict, total_portfolio_value
+    
     stock = yf.Ticker(symbol)
+    stock_info = stock.info
     
     # Validate symbol
-    if not stock.info.get("longName"):
+    if not stock_info.get("longName"):
         notify(state, "error", f"'{symbol}' is not a valid stock symbol")
         return
     
@@ -50,30 +60,49 @@ def GetStockData(symbol, qty, state):
     # Format the Date column
     df["Date"] = df["Date"].dt.strftime("%Y-%m-%d")
 
-    # last close price
+    # Store full 1-year data for later access
+    stock_data_dict[symbol] = df 
+
+    # last close price & Investment Amount
     current_price: float = round(float(df['Close'].iloc[-1]), 2)
+    investment_amount: float = round(current_price*qty, 2)
 
-    # Storing Stock Name, symbol, qty, price and DataFrame in a dictionary
-    stock_data = {
-        "Name": stock.info.get("longName"),
-        "Symbol": symbol,
-        "Quantity": qty,
-        "Current Price": current_price,
-        "Investment Amount": current_price*qty,
-        "DataFrame": df
-    }
+    # Add the Investment Amount to Total Portfolio Value
+    total_portfolio_value += investment_amount
+    state.total_portfolio_value = total_portfolio_value  # Ensure state gets updated
 
-    # Create a **new list** instead of modifying the existing one
-    state.stock_list = state.stock_list + [stock_data]  # New list triggers UI update
+    # Create new row for portfolio table
+    new_row = pd.DataFrame([{
+        "Stock Name": stock_info["longName"],
+        "Stock Symbol": symbol,
+        "Qty": qty,
+        "Current Price": f"{current_price:,.2f}",
+        "Investment Amount": f"{investment_amount:,.2f}"
+    }])
+    
+    # Append new stock to portfolio table
+    # Check if stock_table_data is empty
+    if stock_table_data.empty:
+        stock_table_data = new_row
+    else:
+        stock_table_data = pd.concat([stock_table_data, new_row], ignore_index=True)
+    state.stock_table_data = stock_table_data  # Update Taipy state
 
-    # Optionally, you can print stock_list to verify
-    print(state.stock_list)
+    # Render the table
+    state.render_stock_table = True
 
     # Notify Success
     notify(state, "success", f"Added {symbol}, Quantity: {qty}")
-    
-def OnVaRCalculate():
+
+
+def OnClearTable(state):
+    state.render_stock_table = False
+    print("Now Clearing Table")
+
+
+def OnVaRCalculate(state):
     print("Now calculating VaR")
+
 
 # ----------------------------------
 # Building Pages with TGB
@@ -97,15 +126,21 @@ with tgb.Page() as VaR_page:
     tgb.html("br")  # blank spacer
 
     # Second Card: Portfolio Table
-    with tgb.part(class_name="card"):
-        tgb.text("### Portfolio", mode="md")
+    with tgb.part(class_name="card", render=lambda render_stock_table: render_stock_table):
+        tgb.text("### **Portfolio**", class_name="text-center", mode="md")
+        tgb.table("{stock_table_data}", page_size=10)
+        with tgb.layout(columns="5 1 1", gap="20px"):
+            with tgb.part():
+                tgb.text("Total Portfolio Value: **{total_portfolio_value:,.2f}**", class_name="text-left", mode="md")
+
+            with tgb.part():
+                tgb.button("Clear Table", class_name="plain fullwidth", on_action=OnClearTable)
+                
+            with tgb.part(class_name="text-center"):
+                tgb.button("Calculate VaR", class_name="plain fullwidth", on_action=OnVaRCalculate)
+
         
-        tgb.table(lambda state: pd.DataFrame(state.stock_list) if state.stock_list else pd.DataFrame(columns=["Name", "Symbol", "Quantity", "Current Price", "Investment Amount"]),
-          columns=["Name", "Symbol", "Quantity", "Current Price", "Investment Amount"],
-          class_name="fullwidth")
-    
-        tgb.button("Calculate VaR", class_name="plain text-center", on_action=OnVaRCalculate)
-        
+    tgb.html("br")  # blank spacer
     tgb.html("br")  # blank spacer
     
     
