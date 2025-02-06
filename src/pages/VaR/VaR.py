@@ -3,7 +3,6 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
-import concurrent.futures
 
 
 # Initialize state variables
@@ -17,33 +16,6 @@ stock_table_data = pd.DataFrame(columns=["Stock Name", "Stock Symbol", "Qty", "C
 stock_data_dict = {}  # Store full 1-year historical data keyed by symbol
 total_portfolio_value = 0
 confidence_interval = 95
-
-
-def CalParametricVaR(state): return "Parametric VaR result"
-def CalParametricCVaR(state): return "Parametric CVaR result"
-def CalHistoricalVaR(state): return "Historical VaR result"
-def CalHistoricalCVaR(state): return "Historical CVaR result"
-def CalMonteCarloVaR(state): return "Monte Carlo VaR result"
-def CalMonteCarloCVaR(state): return "Monte Carlo CVaR result"
-def CalTrafficLightVaR(state): return "Traffic Light VaR result"
-def CalTrafficLightCVaR(state): return "Traffic Light CVaR result"
-def CalKupiecVaR(state): return "Kupiec VaR result"
-def CalKupiecCVaR(state): return "Kupiec CVaR result"
-
-
-# VaR Calculations Function Mapping
-VaR_methods = {
-    "Parametric VaR": CalParametricVaR,
-    "Parametric CVaR": CalParametricCVaR,
-    "Historical VaR": CalHistoricalVaR,
-    "Historical CVaR": CalHistoricalCVaR,
-    "Monte Carlo VaR": CalMonteCarloVaR,
-    "Monte Carlo CVaR": CalMonteCarloCVaR,
-    "Traffic Light VaR": CalTrafficLightVaR,
-    "Traffic Light CVaR": CalTrafficLightCVaR,
-    "Kupiec VaR": CalKupiecVaR,
-    "Kupiec CVaR": CalKupiecCVaR,
-}
 
 
 def OnTickerValidate(state):                # Callback function to validate the ticker and handle the input
@@ -142,18 +114,23 @@ def OnClearTable(state):                    # Clear all data
 
 def OnVaRCalculate(state):
     state.render_VaR_data = True
-    notify(state, "info", "Calculating VaR & CVaR...")
+    notify(state, "info", "Calculating VaR & CVaR...")  
 
-    results = {}
-
-    # Run calculations in parallel for better performance
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = {executor.submit(func, state): name for name, func in VaR_methods.items()}
-        for future in concurrent.futures.as_completed(futures):
-            results[futures[future]] = future.result()
-
-    # Store results in state
-    state.VaR_results = results    
+    # Call all VaR & CVaR calculation functions
+    print(CalParametricVaR(state))
+    print(CalParametricCVaR(state))
+    
+    print(CalHistoricalVaR(state))
+    print(CalHistoricalCVaR(state))
+    
+    print(CalMonteCarloVaR(state))
+    print(CalMonteCarloCVaR(state))
+    
+    print(CalTrafficLightVaR(state))
+    print(CalTrafficLightCVaR(state))
+    
+    print(CalKupiecVaR(state))
+    print(CalKupiecCVaR(state))
 
     notify(state, "success", "VaR & CVaR calculations completed.")
 
@@ -305,6 +282,214 @@ def CalMonteCarloVaR(state, num_simulations=10_000, days=1):
 
     print("Monte Carlo VaR: " + MonteCarlo_VaR_results)
     return MonteCarlo_VaR_results
+
+
+def CalMonteCarloCVaR(state, num_simulations=10_000, days=1):
+    confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
+    quantile_level = 1 - confidence_level  # E.g., 0.05 for 95% confidence
+
+    MonteCarlo_CVaR_results = {}
+
+    for symbol, df in state.stock_data_dict.items():
+        df["Returns"] = df["Close"].pct_change().dropna()  # Daily log returns
+        mean_return = df["Returns"].mean()  # Average daily return
+        std_dev = df["Returns"].std()  # Standard deviation of returns
+
+        # Simulate future price movements
+        simulated_returns = np.random.normal(mean_return, std_dev, (num_simulations, days))
+
+        # Compute simulated portfolio values
+        last_price = df["Close"].iloc[-1]
+        simulated_prices = last_price * (1 + simulated_returns)
+
+        # Compute the simulated losses
+        simulated_losses = last_price - simulated_prices
+
+        # Compute Monte Carlo VaR at confidence level
+        VaR_simulated = np.percentile(simulated_losses, quantile_level * 100)
+
+        # Compute CVaR: Average of all losses beyond VaR
+        CVaR_simulated = simulated_losses[simulated_losses >= VaR_simulated].mean()
+
+        # Convert to absolute loss
+        stock_investment = state.stock_table_data.loc[state.stock_table_data["Stock Symbol"] == symbol, "Investment Amount"].values[0]
+        CVaR_abs = round(stock_investment * abs(CVaR_simulated / last_price), 2)
+
+        MonteCarlo_CVaR_results[symbol] = {
+            "CVaR (%)": round(CVaR_simulated / last_price * 100, 2),
+            "CVaR (₹)": CVaR_abs
+        }
+
+    print("Monte Carlo CVaR: " + MonteCarlo_CVaR_results)
+    return MonteCarlo_CVaR_results
+
+
+def CalTrafficLightVaR(state):
+    confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
+    quantile_level = 1 - confidence_level  # E.g., 0.05 for 95% confidence
+
+    TrafficLight_VaR_results = {}
+
+    for symbol, df in state.stock_data_dict.items():
+        df["Returns"] = df["Close"].pct_change().dropna()  # Daily returns
+        VaR_historical = np.percentile(df["Returns"], quantile_level * 100)  # Historical VaR
+
+        # Count exceptions (actual losses exceeding VaR)
+        df["Exceptions"] = df["Returns"] < VaR_historical
+        num_exceptions = df["Exceptions"].sum()
+
+        # Determine the Traffic Light category
+        if num_exceptions <= 4:
+            risk_category = "🟢 Green (Model OK)"
+        elif 5 <= num_exceptions <= 9:
+            risk_category = "🟡 Yellow (Monitor Closely)"
+        else:
+            risk_category = "🔴 Red (Model Unreliable)"
+
+        TrafficLight_VaR_results[symbol] = {
+            "VaR (%)": round(VaR_historical * 100, 2),
+            "Exceptions": num_exceptions,
+            "Risk Category": risk_category
+        }
+
+    print("Traffic Light VaR: " + TrafficLight_VaR_results)
+    return TrafficLight_VaR_results
+
+
+def CalTrafficLightCVaR(state):
+    confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
+    quantile_level = 1 - confidence_level  # E.g., 0.05 for 95% confidence
+
+    TrafficLight_CVaR_results = {}
+
+    for symbol, df in state.stock_data_dict.items():
+        df["Returns"] = df["Close"].pct_change().dropna()  # Daily returns
+        VaR_historical = np.percentile(df["Returns"], quantile_level * 100)  # Historical VaR
+
+        # Compute CVaR: Average of all returns beyond VaR threshold
+        CVaR_historical = df["Returns"][df["Returns"] < VaR_historical].mean()
+
+        # Count extreme losses beyond CVaR
+        df["Extreme_Losses"] = df["Returns"] < CVaR_historical
+        num_extreme_losses = df["Extreme_Losses"].sum()
+
+        # Determine the Traffic Light category based on extreme losses
+        if num_extreme_losses <= 4:
+            risk_category = "🟢 Green (Model OK)"
+        elif 5 <= num_extreme_losses <= 9:
+            risk_category = "🟡 Yellow (Monitor Closely)"
+        else:
+            risk_category = "🔴 Red (Model Unreliable)"
+
+        TrafficLight_CVaR_results[symbol] = {
+            "CVaR (%)": round(CVaR_historical * 100, 2),
+            "Extreme Losses": num_extreme_losses,
+            "Risk Category": risk_category
+        }
+
+    print("Traffic Light CVaR: " + TrafficLight_CVaR_results)
+    return TrafficLight_CVaR_results
+
+
+def CalKupiecVaR(state):
+    confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
+    failure_probability = 1 - confidence_level  # Expected failure rate (e.g., 5% for 95% confidence)
+
+    Kupiec_VaR_results = {}
+
+    for symbol, df in state.stock_data_dict.items():
+        df["Returns"] = df["Close"].pct_change().dropna()  # Calculate daily returns
+        VaR_historical = np.percentile(df["Returns"], failure_probability * 100)  # Historical VaR
+
+        # Count actual VaR breaches (exceptions)
+        df["Exceptions"] = df["Returns"] < VaR_historical
+        num_exceptions = df["Exceptions"].sum()
+        num_obs = len(df)  # Total number of days
+
+        # Compute Kupiec likelihood ratio (LR) test statistic
+        if num_exceptions > 0 and num_exceptions < num_obs:
+            prob_fail = num_exceptions / num_obs
+            LR_POF = -2 * np.log(
+                ((1 - failure_probability) ** (num_obs - num_exceptions) * failure_probability ** num_exceptions) /
+                ((1 - prob_fail) ** (num_obs - num_exceptions) * prob_fail ** num_exceptions)
+            )
+        else:
+            LR_POF = np.inf  # Invalid case, model is unreliable
+
+        # Compute p-value from Chi-Square distribution
+        p_value = 1 - stats.chi2.cdf(LR_POF, df=1)
+
+        # Determine if model passes or fails
+        if LR_POF < 3.84:  # Chi-square critical value at 95% confidence
+            model_status = "✅ Model Passes (Reliable)"
+        else:
+            model_status = "❌ Model Fails (Unreliable)"
+
+        Kupiec_VaR_results[symbol] = {
+            "VaR (%)": round(VaR_historical * 100, 2),
+            "Observed Breaches": num_exceptions,
+            "Likelihood Ratio": round(LR_POF, 2),
+            "p-value": round(p_value, 4),
+            "Model Status": model_status
+        }
+
+    print("Kupiec VaR: " + Kupiec_VaR_results)
+    return Kupiec_VaR_results
+
+
+def CalKupiecCVaR(state):
+    confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
+    failure_probability = 1 - confidence_level  # Expected failure rate (e.g., 5% for 95% confidence)
+
+    Kupiec_CVaR_results = {}
+
+    for symbol, df in state.stock_data_dict.items():
+        df["Returns"] = df["Close"].pct_change().dropna()  # Calculate daily returns
+        VaR_historical = np.percentile(df["Returns"], failure_probability * 100)  # Historical VaR
+
+        # Calculate CVaR (average of worst losses beyond VaR)
+        worst_losses = df[df["Returns"] < VaR_historical]["Returns"]
+        if not worst_losses.empty:
+            CVaR_historical = worst_losses.mean()
+        else:
+            CVaR_historical = VaR_historical  # If no worst cases, fallback to VaR
+
+        # Count actual CVaR breaches (exceptions)
+        df["Exceptions"] = df["Returns"] < CVaR_historical
+        num_exceptions = df["Exceptions"].sum()
+        num_obs = len(df)  # Total number of days
+
+        # Compute Kupiec likelihood ratio (LR) test statistic
+        if num_exceptions > 0 and num_exceptions < num_obs:
+            prob_fail = num_exceptions / num_obs
+            LR_POF = -2 * np.log(
+                ((1 - failure_probability) ** (num_obs - num_exceptions) * failure_probability ** num_exceptions) /
+                ((1 - prob_fail) ** (num_obs - num_exceptions) * prob_fail ** num_exceptions)
+            )
+        else:
+            LR_POF = np.inf  # Invalid case, model is unreliable
+
+        # Compute p-value from Chi-Square distribution
+        p_value = 1 - stats.chi2.cdf(LR_POF, df=1)
+
+        # Determine if model passes or fails
+        if LR_POF < 3.84:  # Chi-square critical value at 95% confidence
+            model_status = "✅ Model Passes (Reliable)"
+        else:
+            model_status = "❌ Model Fails (Unreliable)"
+
+        Kupiec_CVaR_results[symbol] = {
+            "CVaR (%)": round(CVaR_historical * 100, 2),
+            "Observed Breaches": num_exceptions,
+            "Likelihood Ratio": round(LR_POF, 2),
+            "p-value": round(p_value, 4),
+            "Model Status": model_status
+        }
+
+    print("Kupiec CVaR: " + Kupiec_CVaR_results)
+    return Kupiec_CVaR_results
+
+
 
 
 # ----------------------------------
