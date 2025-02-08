@@ -9,14 +9,16 @@ import scipy.stats as stats
 input_ticker = ""
 input_qty = 1
 render_stock_table = False
-render_VaR_data = False
+render_VaR_results = False
 
 # Store portfolio data (table) and full stock data (dict)
 stock_table_data = pd.DataFrame(columns=["Stock Name", "Stock Symbol", "Qty", "Current Price", "Investment Amount"])
 stock_data_dict = {}  # Store full 1-year historical data keyed by symbol
 total_portfolio_value = 0
 confidence_interval = 95
-
+close_prices = None         # Will assign closing price of each stock in pandas dataframe
+daily_returns = None        # Will assign daily returns of each stock in pandas dataframe
+weightage_arr = None        # Weightage of each stock
 
 def OnTickerValidate(state):                # Callback function to validate the ticker and handle the input
     ticker: str = state.input_ticker.upper()
@@ -97,69 +99,104 @@ def GetStockData(symbol, qty, state):       # Fetch stock data and add to portfo
     notify(state, "success", f"Added {symbol}, Quantity: {qty}")
 
 
-def OnClearTable(state):                    # Clear all data
-    global stock_table_data, stock_data_dict, total_portfolio_value
-    # setting all values to default values
-    state.render_stock_table = False
-    state.render_VaR_data = False
-    state.confidence_interval = 95
+def OnClearTable(state):                    # Reset to default values
+    global render_stock_table, render_VaR_results, stock_table_data, stock_data_dict
+    global total_portfolio_value, confidence_interval, close_prices, daily_returns, weightage_arr
 
-    total_portfolio_value = 0
-    state.total_portfolio_value = total_portfolio_value  # Ensure state gets updated
+    # setting all values to default values
+    render_stock_table = False
+    render_VaR_results = False
     stock_table_data = stock_table_data.iloc[0:0]
-    state.stock_table_data = stock_table_data
     stock_data_dict = {}  # Reset the dictionary
+    total_portfolio_value = 0
+    confidence_interval = 95
+    close_prices = None
+    daily_returns = None
+    weightage_arr = None
+
+    # Ensure state gets updated
+    state.render_stock_table = render_stock_table
+    state.render_VaR_results = render_VaR_results
+    state.stock_table_data = stock_table_data
     state.stock_data_dict = stock_data_dict
+    state.total_portfolio_value = total_portfolio_value
+    state.confidence_interval = confidence_interval
 
 
 def OnVaRCalculate(state):
-    state.render_VaR_data = True
-    notify(state, "info", "Calculating VaR & CVaR...")  
+    global close_prices, daily_returns, weightage_arr
+    if state.render_VaR_results == False:
+        state.render_VaR_results = True
+    notify(state, "info", "Calculating VaR & CVaR...")
+
+    # Getting Close prices of all stocks in one pandas dataframe
+    close_prices = pd.concat({symbol: df.set_index("Date")["Close"] for symbol, df in stock_data_dict.items()},axis=1)
+    close_prices.columns = stock_data_dict.keys()       # Rename columns for readability
+    daily_returns = close_prices.pct_change().dropna()  # All daily return of each stock
+
+    # Calculate weightage for each stock
+    # Convert weightage_arr to a NumPy array and ensure it matches avg_returns index
+    weightage_arr = stock_table_data.set_index("Stock Symbol")["Investment Amount"]
+    weightage_arr = weightage_arr.loc[close_prices.columns]  # Align with stock symbols
+    weightage_arr = weightage_arr.str.replace(",", "").astype(float) / total_portfolio_value  # Normalize
+    weightage_arr = weightage_arr.to_numpy()  # Convert to NumPy array
 
     # Call all VaR & CVaR calculation functions
-    print(CalParametricVaR(state))
-    print(CalParametricCVaR(state))
-    
-    print(CalHistoricalVaR(state))
-    print(CalHistoricalCVaR(state))
-    
-    print(CalMonteCarloVaR(state))
-    print(CalMonteCarloCVaR(state))
-    
-    print(CalTrafficLightVaR(state))
-    print(CalTrafficLightCVaR(state))
-    
-    print(CalKupiecVaR(state))
-    print(CalKupiecCVaR(state))
+    print("Parametric VaR: ", CalParametricVaR(state))
 
-    notify(state, "success", "VaR & CVaR calculations completed.")
+
+
+
+    # print(CalParametricCVaR(state))
+    
+    # print(CalHistoricalVaR(state))
+    # print(CalHistoricalCVaR(state))
+    
+    # print(CalMonteCarloVaR(state))
+    # print(CalMonteCarloCVaR(state))
+    
+    # print(CalTrafficLightVaR(state))
+    # print(CalTrafficLightCVaR(state))
+    
+    # print(CalKupiecVaR(state))
+    # print(CalKupiecCVaR(state))
 
 
 def CalParametricVaR(state):
+    global close_prices, daily_returns, weightage_arr
+    VaR_results = None
+
+    # Calculate Variance Covariance Matrix
+    cov_matrix = daily_returns.cov()
+
+    # Average Return
+    avg_returns = daily_returns.mean()
+
+    # Total count of returns
+    count = daily_returns.shape[0]
+
+    # Mean (Portfolio Expected Return)
+    port_mean = avg_returns @ weightage_arr
+
+    # Calculate standard deviation (Portfolio Risk)
+    port_std = np.sqrt(weightage_arr.T @ cov_matrix @ weightage_arr)
+
+    print("Portfolio Mean:", port_mean)
+    print("Portfolio Standard Deviation:", port_std)
+
     confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
-    z_score = stats.norm.ppf(confidence_level)  # Get Z-score for confidence level
+    confidence_level = 1-confidence_level
+    print("Confidence Level:", confidence_level)
+    VaR_results = stats.norm.ppf(confidence_level, port_mean, port_std)     # (Percent-Point Function) normal distribution function 
 
-    VaR_results = {}
+    # 2 is z value based on 95% CI
+    z = 2
+    lower = port_mean - z*port_std / np.sqrt(count)
+    higher = port_mean + z*port_std / np.sqrt(count)
 
-    for symbol, df in state.stock_data_dict.items():
-        df["Returns"] = df["Close"].pct_change()  # Calculate daily returns
-        mean_return = np.mean(df["Returns"].dropna())  # Mean return
-        std_dev = np.std(df["Returns"].dropna())  # Standard deviation
+    print("Lower:", lower)
+    print("Higher:", higher)
 
-        # Calculate VaR
-        VaR = mean_return - (z_score * std_dev)
-
-        # Convert to absolute portfolio value
-        stock_qty = state.stock_table_data.loc[state.stock_table_data["Stock Symbol"] == symbol, "Qty"].values[0]
-        stock_investment = state.stock_table_data.loc[state.stock_table_data["Stock Symbol"] == symbol, "Investment Amount"].values[0]
-        VaR_abs = round(stock_investment * abs(VaR), 2)
-
-        VaR_results[symbol] = {
-            "VaR (%)": round(VaR * 100, 2),
-            "VaR (₹)": VaR_abs
-        }
-
-    print("Parametric VaR: " + VaR_results)
     return VaR_results
 
 
@@ -523,16 +560,15 @@ with tgb.Page() as VaR_page:
                 tgb.text("Total Portfolio Value: **{total_portfolio_value:,.2f}**", class_name="text-left", mode="md")
 
             with tgb.part():
-                tgb.button("Clear Table", class_name="plain fullwidth", on_action=OnClearTable)
+                tgb.button("Clear Results", class_name="plain fullwidth", on_action=OnClearTable)
                 
             with tgb.part(class_name="text-center"):
                 tgb.button("Calculate VaR", class_name="plain fullwidth", on_action=OnVaRCalculate)
 
-        
     tgb.html("br")  # blank spacer
     tgb.html("br")  # blank spacer
     
-    with tgb.part(class_name="card", render=lambda render_VaR_data: render_VaR_data):
+    with tgb.part(class_name="card", render=lambda render_VaR_results: render_VaR_results):
         tgb.text("## **VaR** & **CVaR**", class_name="text-center", mode="md")
 
         with tgb.layout(columns="1 2", gap="10px"):  # Wider layout for better alignment
@@ -540,7 +576,7 @@ with tgb.Page() as VaR_page:
                 tgb.text("Confidence Interval: **{confidence_interval}%**", class_name="text-center", mode="md")
 
             with tgb.part(class_name="fullwidth"):
-                tgb.slider(value="{confidence_interval}", min=80, max=99, step=1)   # Default value = 95
+                tgb.slider(value="{confidence_interval}", min=80, max=99, step=1, on_change=OnVaRCalculate)   # Default value = 95
 
     
     tgb.html("br")  # blank spacer
