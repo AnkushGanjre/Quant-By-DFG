@@ -1,8 +1,9 @@
 from taipy.gui import Gui
 import taipy as tp
 
-from pages.home.home import home_page
-from pages.VaR.VaR import VaR_page
+from pages.dashboard.dashboard import dashboard_page
+from pages.value_at_risk.value_at_risk import valueAtRisk_page
+from pages.option_pricing.option_pricing import optionPricing_page
 from pages.root import root
 
 # from config.config import Config
@@ -10,8 +11,9 @@ from pages.root import root
 
 pages = {
     "/": root,
-    "Home": home_page,
-    "VaR": VaR_page,
+    "Dashboard": dashboard_page,
+    "VaR": valueAtRisk_page,
+    "OP": optionPricing_page,
 }
 
 
