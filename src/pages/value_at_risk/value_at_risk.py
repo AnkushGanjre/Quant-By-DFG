@@ -3,6 +3,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
+import matplotlib.pyplot as plt
 
 # Initialize state variables
 input_ticker = ""
@@ -146,40 +147,46 @@ def OnVaRCalculate(state):
 
 
 def CalParametricVaR(state):
-    global close_prices, daily_returns, weightage_arr
+    global close_prices, daily_returns, weightage_arr, total_portfolio_value
     VaR_results = None
-
-    # Calculate Variance Covariance Matrix
-    cov_matrix = daily_returns.cov()
 
     # Average Return
     avg_returns = daily_returns.mean()
 
-    # Total count of returns
-    count = daily_returns.shape[0]
+    # Calculate Variance Covariance Matrix
+    # Covariance matrix shows how different stocks move together.
+    cov_matrix = daily_returns.cov()
 
     # Mean (Portfolio Expected Return)
     port_mean = avg_returns @ weightage_arr
 
     # Calculate standard deviation (Portfolio Risk)
+    # weightage_arr.T is the transpose of the weight array. 
+    # If weightage_arr is a column vector, then weightage_arr.T becomes a row vector.
+    # Matrix Multiplication (@ operator)
+    # weightage_arr.T @ cov_matrix gives a row vector representing the combined effect of stock covariances on portfolio risk.
+    # (weightage_arr.T @ cov_matrix) @ weightage_arr → This results in a single number, which is the portfolio variance.
+    # np.sqrt(...) → Finally, we take the square root to get the portfolio standard deviation (port_std), 
+    # which is the overall risk of the portfolio.
+    # It is also refered to as Portfolio Volatility
     port_std = np.sqrt(weightage_arr.T @ cov_matrix @ weightage_arr)
-
-    print("Portfolio Mean:", port_mean)
-    print("Portfolio Standard Deviation:", port_std)
 
     confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
     confidence_level = 1-confidence_level
-    print("Confidence Level:", confidence_level)
-    VaR_results = stats.norm.ppf(confidence_level, port_mean, port_std)     # (Percent-Point Function) normal distribution function 
 
-    # 2 is z value based on 95% CI
-    z = 2
-    lower = port_mean - z*port_std / np.sqrt(count)
-    higher = port_mean + z*port_std / np.sqrt(count)
+    # This is the percent-point function (PPF)
+    # (also known as the inverse cumulative distribution function) 
+    # for the standard normal distribution.
+    z_score = stats.norm.ppf(confidence_level)
 
-    print("Lower:", lower)
-    print("Higher:", higher)
+    # Parametric VaR = (mean + Z score * std_dev) * portfolio val
+    VaR_results = (port_mean + z_score * port_std) * total_portfolio_value
 
+    # # Calculating Normal distribution curve
+    # x = np.arange(-0.05, 0.055, 0.001)
+    # norm_dist = stats.norm.pdf(x, port_mean, port_std)
+    # plt.plot(x, norm_dist, color = 'r')
+    # plt.show()
     return VaR_results
 
 
