@@ -3,7 +3,7 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 # Initialize state variables
 input_ticker = ""
@@ -13,12 +13,15 @@ render_VaR_results = False
 
 # Store portfolio data (table) and full stock data (dict)
 stock_table_data = pd.DataFrame(columns=["Stock Name", "Stock Symbol", "Qty", "Current Price", "Investment Amount"])
-stock_data_dict = {}  # Store full 1-year historical data keyed by symbol
+stock_data_dict = {}            # Store full 1-year historical data keyed by symbol
 total_portfolio_value = 0
 confidence_interval = 95
-close_prices = None         # Will assign closing price of each stock in pandas dataframe
-daily_returns = None        # Will assign daily returns of each stock in pandas dataframe
-weightage_arr = None        # Weightage of each stock in a numpy array
+close_prices = None             # Will assign closing price of each stock in pandas dataframe
+daily_returns = None            # Will assign daily returns of each stock in pandas dataframe
+weightage_arr = None            # Weightage of each stock in a numpy array
+portfolio_returns = None        # Matrix multiplication of daily_returns & weightage_arr
+port_std_dev = None
+port_mean = None
 
 def OnTickerValidate(state):                # Callback function to validate the ticker and handle the input
     ticker: str = state.input_ticker.upper()
@@ -124,7 +127,7 @@ def OnClearTable(state):                    # Reset to default values
 
 
 def OnVaRCalculate(state):
-    global close_prices, daily_returns, weightage_arr
+    global close_prices, daily_returns, weightage_arr, portfolio_returns
     if state.render_VaR_results == False:
         state.render_VaR_results = True
     notify(state, "info", "Calculating VaR & CVaR...")
@@ -141,13 +144,20 @@ def OnVaRCalculate(state):
     weightage_arr = weightage_arr.str.replace(",", "").astype(float) / total_portfolio_value  # Normalize
     weightage_arr = weightage_arr.to_numpy()  # Convert to NumPy array
 
+    # Calculate daily portfolio returns keeping
+    portfolio_returns = daily_returns @ weightage_arr  # Matrix multiplication now it is a numpy array
+    # For converting into pandas dataframe
+    # portfolio_returns = pd.DataFrame(portfolio_returns, index=daily_returns.index, columns=["Portfolio Return"])
+
     # Call all VaR & CVaR calculation functions
     print("Parametric VaR: ", CalParametricVaR(state))
+    print("Historical VaR: ", CalHistoricalVaR(state))
     print("Monte Carlo VaR: ", CalMonteCarloVaR(state))
 
 
 def CalParametricVaR(state):
-    global close_prices, daily_returns, weightage_arr, total_portfolio_value
+    global close_prices, daily_returns, weightage_arr
+    global total_portfolio_value, port_std_dev, port_mean
     VaR_results = None
 
     # Average Return
@@ -155,7 +165,7 @@ def CalParametricVaR(state):
 
     # Calculate Variance Covariance Matrix
     # Covariance matrix shows how different stocks move together.
-    cov_matrix = daily_returns.cov()
+    cov_matrix = daily_returns.dropna().cov()
 
     # Mean (Portfolio Expected Return)
     port_mean = avg_returns @ weightage_arr
@@ -169,45 +179,104 @@ def CalParametricVaR(state):
     # np.sqrt(...) → Finally, we take the square root to get the portfolio standard deviation (port_std), 
     # which is the overall risk of the portfolio.
     # It is also refered to as Portfolio Volatility
-    port_std = np.sqrt(weightage_arr.T @ cov_matrix @ weightage_arr)
+    port_std_dev = np.sqrt(weightage_arr.T @ cov_matrix @ weightage_arr)
 
     confidence_level = state.confidence_interval / 100  # Convert to decimal (e.g., 95 → 0.95)
-    confidence_level = 1-confidence_level
+    alpha = 1-confidence_level
 
     # This is the percent-point function (PPF)
     # (also known as the inverse cumulative distribution function) 
     # for the standard normal distribution.
-    z_score = stats.norm.ppf(confidence_level)
+    z_score = stats.norm.ppf(alpha)
 
     # Parametric VaR = (mean + Z score * std_dev) * portfolio val
-    VaR_results = (port_mean + z_score * port_std) * total_portfolio_value
+    VaR_results = (port_mean + z_score * port_std_dev) * total_portfolio_value
+    return VaR_results
 
-    # # Calculating Normal distribution curve
-    # x = np.arange(-0.05, 0.055, 0.001)
-    # norm_dist = stats.norm.pdf(x, port_mean, port_std)
-    # plt.plot(x, norm_dist, color = 'r')
-    # plt.show()
+
+def CalHistoricalVaR(state):
+    global portfolio_returns, total_portfolio_value
+    VaR_results = None
+
+    # Sort portfolio returns from lowest to highest
+    sorted_returns = np.sort(portfolio_returns)
+    count = portfolio_returns.shape[0]
+    confidence_level = state.confidence_interval / 100      # Convert to decimal (e.g., 95 → 0.95)
+    alpha = 1-confidence_level
+    rank = round(count * alpha)
+    value_at_rank = sorted_returns[rank - 1]       # (zero-based index)
+    VaR_results = total_portfolio_value * value_at_rank
     return VaR_results
 
 
 def CalMonteCarloVaR(state):
     global close_prices, daily_returns, weightage_arr
+    global total_portfolio_value, port_std_dev, port_mean
     VaR_results = None
 
-    n_sims = 1000000
-    rfr = 0
-    time = 30
-    vol = 0.25
-    s0 = 1
+    n_sims = 100000
 
-    d = (rfr - 0.5 * vol**2) * (time / 252)
-    a = vol * np.sqrt(time / 252)
-    r = np.random.normal(0, 1, (n_sims, 1))
+    # Generate Uncorrelated random variables, count = n_sims
+    uncorrelated_randoms = pd.DataFrame(stats.norm.ppf(np.random.rand(n_sims, daily_returns.shape[1])))
+    uncorrelated_randoms.columns = daily_returns.columns
+    # print(uncorrelated_randoms)
 
-    GBM_returns = s0 * np.exp(d + a*r)
+    # Compute the correlation matrix of daily returns
+    correlation_matrix_dailyReturns = daily_returns.corr()
 
-    pers = [0.01, 0.1, 1.0, 2.5, 5.0, 10.0]
-    VaR_results = stats.scoreatpercentile(GBM_returns -1, pers)
+    # Compute the Cholesky decomposition of the correlation matrix
+    cholesky_matrix = np.linalg.cholesky(correlation_matrix_dailyReturns)
+
+    # Matrix multiply Cholesky decomposition with the transpose of uncorrelated random variables
+    correlated_randoms = cholesky_matrix @ uncorrelated_randoms.T
+    # Transpose back to match the original shape (n_sims × n_assets)
+    correlated_randoms = correlated_randoms.T
+
+    # Geometric Brownian Motion Formula to stimulate stock price
+    # S_t = S0 * exp((μ - 0.5 * σ²) * t + σW_t)
+    # S_t​= Stock price at time 𝑡    (Price tomorrow for 1 day var)
+    # S_0= inital stock price       (Price Today i.e., last traded price)
+    # μ (meu)= Expected return (drift)
+    # σ (Sigma)= Volatility (standard deviation of returns)
+    # W_t= Wiener process (standard Brownian motion)
+    # t= Time step
+
+    # Compute drift term (μ)
+    meu = port_mean - 0.5 * (port_std_dev ** 2)
+
+    # Compute volatility (σ) for each stock individually
+    sigma = daily_returns.std()  # Standard deviation (volatility) for each stock
+
+    # Extract last traded price for each stock (S_0)
+    S_0 = close_prices.iloc[-1]  # Last row (latest closing prices)
+
+
+    # Compute simulated stock prices
+    sim_stock_prices = pd.DataFrame(np.zeros_like(correlated_randoms), columns=daily_returns.columns)
+
+    sigma = np.nan_to_num(sigma.values.reshape(1, -1))  # Ensure correct shape and no NaN
+    S_0 = np.nan_to_num(S_0)  # Ensure no NaN in last prices
+    correlated_randoms = np.nan_to_num(correlated_randoms)  # Ensure valid random values
+
+    # Time steps
+    t_values = (np.arange(1, n_sims + 1) / n_sims).reshape(-1, 1)
+
+    # Apply the GBM formula
+    sim_stock_prices = S_0 * np.exp((meu - 0.5 * sigma**2) * t_values + sigma * correlated_randoms)
+
+    # Convert to DataFrame
+    sim_stock_prices = pd.DataFrame(sim_stock_prices, columns=daily_returns.columns)
+    sim_stock_prices_returns = sim_stock_prices.pct_change().dropna()  # All simulated price return of each stock
+    sim_portfolio_returns = sim_stock_prices_returns @ weightage_arr  # Matrix multiplication now it is a numpy array
+    sim_portfolio_returns_sorted = np.sort(sim_portfolio_returns)   # Sort from lowest to highest
+
+    # Now last calculation
+    count = sim_portfolio_returns_sorted.shape[0]
+    confidence_level = state.confidence_interval / 100      # Convert to decimal (e.g., 95 → 0.95)
+    alpha = 1-confidence_level
+    rank = round(count * alpha)
+    value_at_rank = sim_portfolio_returns_sorted[rank - 1]       # (zero-based index)
+    VaR_results = total_portfolio_value * value_at_rank
 
     return VaR_results
 
