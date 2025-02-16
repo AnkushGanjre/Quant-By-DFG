@@ -49,7 +49,8 @@ def CalcMonteCarlo(state):
 
 
 with tgb.Page() as optionPricing_page:
-    tgb.text("# **Option Pricing**", mode="md")
-    tgb.button("Monte Carlo", class_name="plain", on_action=CalcMonteCarlo)
+    tgb.text("# **European Option Pricing**", mode="md")
+    tgb.text("Work in progress", mode="md")
+    # tgb.button("Monte Carlo", class_name="plain", on_action=CalcMonteCarlo)
     tgb.html("br")
     

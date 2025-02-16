@@ -3,7 +3,7 @@ import taipy as tp
 
 from pages.dashboard.dashboard import dashboard_page
 from pages.value_at_risk.value_at_risk import valueAtRisk_page
-from pages.option_pricing.option_pricing import optionPricing_page
+from pages.european_option_pricing.european_option_pricing import optionPricing_page
 from pages.root import root
 
 # from config.config import Config
@@ -13,7 +13,7 @@ pages = {
     "/": root,
     "Dashboard": dashboard_page,
     "VaR": valueAtRisk_page,
-    "OP": optionPricing_page,
+    "EOP": optionPricing_page,
 }
 
 
