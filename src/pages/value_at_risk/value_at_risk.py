@@ -20,7 +20,7 @@ close_prices = None             # Will assign closing price of each stock in pan
 daily_returns = None            # Will assign daily returns of each stock in pandas dataframe
 weightage_arr = None            # Weightage of each stock in a numpy array
 portfolio_returns = None        # Matrix multiplication of daily_returns & weightage_arr
-n_sims = 500000                 # No. of simulations for Monte Carlo
+n_sims = 1000                 # No. of simulations for Monte Carlo
 
 # Initialize an empty DataFrame with the required columns
 all_result_table_data = pd.DataFrame(columns=["Method", "Value at Risk", "Conditional Value at Risk", "Traffic Light", "Kupiec"])
@@ -476,7 +476,7 @@ with tgb.Page() as valueAtRisk_page:
                 tgb.text("Number of Simulations: **{n_sims:,}**", class_name="text-center", mode="md")
 
             with tgb.part(class_name="fullwidth"):
-                tgb.slider(value="{n_sims}", min=10000, max=1000000, step=50000, on_change=OnVaRCalculate)
+                tgb.slider(value="{n_sims}", min=1000, max=100000, step=1000, on_change=OnVaRCalculate)
         # tgb.chart(
         #     "{cvar_chart_data}",
         #     type="bar",
